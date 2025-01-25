@@ -1,4 +1,4 @@
-# beta9 sdk
+# 7rainbow sdk
 
 Python SDK for Beta9.
 
