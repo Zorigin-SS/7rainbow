@@ -150,7 +150,7 @@ make setup-sdk
 
 ### Using the SDK
 
-After you've setup the server and SDK, check out the SDK readme [here](sdk/README.md).
+After you've setup the server and SDK, check out the SDK readme .
 
 ## Contributing
 
