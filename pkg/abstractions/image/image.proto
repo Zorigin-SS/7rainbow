@@ -1,0 +1,62 @@
+syntax = "proto3";
+
+option go_package = "github.com/beam-cloud/beta9/proto";
+
+package image;
+
+service ImageService {
+  rpc VerifyImageBuild(VerifyImageBuildRequest)
+      returns (VerifyImageBuildResponse) {}
+  rpc BuildImage(BuildImageRequest) returns (stream BuildImageResponse) {}
+}
+
+message BuildStep {
+  string type = 1;
+  string command = 2;
+}
+
+message VerifyImageBuildRequest {
+  string python_version = 1;
+  repeated string python_packages = 2;
+  repeated string commands = 3;
+  bool force_rebuild = 4;
+  string existing_image_uri = 5;
+  repeated BuildStep build_steps = 6;
+  repeated string env_vars = 7;
+  string dockerfile = 8;
+  string build_ctx_object = 9;
+  repeated string secrets = 10;
+  string gpu = 11;
+}
+
+message VerifyImageBuildResponse {
+  string image_id = 1;
+  bool valid = 2;
+  bool exists = 3;
+}
+
+message BuildImageRequest {
+  // These parameters are used for a "beta9" managed image
+  string python_version = 1;
+  repeated string python_packages = 2;
+  repeated string commands = 3;
+
+  // These parameters are used for an existing image
+  string existing_image_uri = 4; // URI for an existing image in the format
+  // "docker://image-repo-name:tag"
+
+  map<string, string> existing_image_creds = 5;
+  repeated BuildStep build_steps = 6;
+  repeated string env_vars = 7;
+  string dockerfile = 8;
+  string build_ctx_object = 9;
+  repeated string secrets = 10;
+  string gpu = 11;
+}
+
+message BuildImageResponse {
+  string image_id = 1;
+  string msg = 2;
+  bool done = 3;
+  bool success = 4;
+}

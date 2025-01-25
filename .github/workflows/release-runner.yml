@@ -1,0 +1,74 @@
+name: Build and release Runner
+
+on:
+  release:
+    types: [created]
+
+jobs:
+  build_and_release_runner:
+    if: startsWith(github.ref, 'refs/tags/runner-')
+    environment: Release
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          # Python versions
+          - version: '3.8'
+            target: 'py38'
+          - version: '3.9'
+            target: 'py39'
+          - version: '3.10'
+            target: 'py310'
+          - version: '3.11'
+            target: 'py311'
+          - version: '3.12'
+            target: 'py312'
+          # Micromamba versions
+          - version: '3.8'
+            target: 'micromamba'
+          - version: '3.9'
+            target: 'micromamba'
+          - version: '3.10'
+            target: 'micromamba'
+          - version: '3.11'
+            target: 'micromamba'
+          - version: '3.12'
+            target: 'micromamba'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v1
+
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+        id: login-ecr
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+        with:
+          mask-password: 'true'
+          registry-type: public
+
+      - name: Extract tag name
+        run: echo "RUNNER_TAG=${GITHUB_REF#refs/tags/runner-}" >> $GITHUB_ENV
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./docker/Dockerfile.runner
+          push: true
+          tags: ${{ secrets.ECR_REGISTRY }}/beta9-runner:${{ matrix.target == 'micromamba' && format('micromamba{0}', matrix.version) || matrix.target }}-${{ env.RUNNER_TAG }},${{ secrets.ECR_REGISTRY }}/beta9-runner:${{ matrix.target == 'micromamba' && format('micromamba{0}', matrix.version) || matrix.target }}-latest
+          target: ${{ matrix.target }}
+          build-args: |
+            ${{ matrix.target == 'micromamba' && format('PYTHON_VERSION={0}', matrix.version) || '' }}
+          platforms: linux/amd64
+          load: false
+          registry: ${{ steps.login-ecr.outputs.registry }}
+          repository: ${{ steps.login-ecr.outputs.registry }}/beta9-runner
+          add_git_labels: true
+          tag_with_ref: true

@@ -1,0 +1,73 @@
+FROM golang:1.22.10-bullseye AS base
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends fuse3
+
+RUN curl -L https://beam-runner-python-deps.s3.amazonaws.com/juicefs -o /usr/local/bin/juicefs && chmod +x /usr/local/bin/juicefs
+RUN curl -fsSL https://tailscale.com/install.sh | sh
+
+RUN apt-get install -y libfuse2 libfuse-dev bash-completion && \
+    export ARCH="$(dpkg --print-architecture)" && \
+    if [ "$ARCH" = "amd64" ]; then \
+        ARCH="x86_64"; \
+    fi && \
+    curl -sSf -o mountpoint.deb https://s3.amazonaws.com/mountpoint-s3-release/1.5.0/${ARCH}/mount-s3-1.5.0-${ARCH}.deb && \
+    dpkg -i mountpoint.deb && \
+    rm -vf mountpoint.deb
+
+RUN if [ "$(uname -m)" = "x86_64" ]; then \
+    curl -L https://beam-runner-python-deps.s3.amazonaws.com/cuno_1.2.6_amd64_glibc.deb -o /tmp/cuno_1.2.6_amd64_glibc.deb && \
+    apt-get install -y /tmp/cuno_1.2.6_amd64_glibc.deb && rm /tmp/cuno_1.2.6_amd64_glibc.deb; \
+    fi
+
+# skopeo
+# ========================
+FROM golang AS skopeo
+
+WORKDIR /workspace
+
+ENV CGO_ENABLED="0"  \
+    DISABLE_DOCS="1" \
+    GO_DYN_FLAGS=""  \
+    BUILDTAGS="containers_image_openpgp"
+
+RUN <<EOT
+set -eux
+git clone https://github.com/containers/skopeo.git .
+make
+make install
+/usr/local/bin/skopeo --version
+EOT
+
+# Target used in development environments
+FROM base AS build
+
+WORKDIR /workspace
+
+RUN apt-get install -y libfuse3-dev libbtrfs-dev libgpgme-dev && \
+    go install github.com/cosmtrek/air@v1.49.0
+
+COPY go.mod go.sum ./
+RUN go mod download && go mod verify
+
+COPY --from=skopeo /usr/local/bin/skopeo /usr/local/bin/skopeo
+COPY --from=skopeo /workspace/default-policy.json /etc/containers/policy.json
+COPY . .
+
+RUN go build -o /usr/local/bin/gateway /workspace/cmd/gateway/main.go
+
+
+# Target used in production-like environments
+FROM base AS release
+
+WORKDIR /workspace
+
+RUN apt-get autoclean
+
+COPY --from=build /usr/local/bin/gateway /usr/local/bin/
+COPY --from=skopeo /usr/local/bin/skopeo /usr/local/bin/skopeo
+COPY --from=skopeo /workspace/default-policy.json /etc/containers/policy.json
+RUN /usr/local/bin/skopeo --version
+
+
+CMD ["tail", "-f", "/dev/null"]

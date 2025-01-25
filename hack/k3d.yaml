@@ -1,0 +1,48 @@
+---
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: beta9
+image: docker.io/rancher/k3s:v1.28.5-k3s1
+servers: 1
+
+ports:
+- port: 1993:1993
+  nodeFilters:
+  - loadbalancer
+- port: 1994:1994
+  nodeFilters:
+  - loadbalancer
+- port: 9000:9000
+  nodeFilters:
+  - loadbalancer
+- port: 8008:8008
+  nodeFilters:
+  - loadbalancer
+- port: 9900:9900
+  nodeFilters:
+  - loadbalancer
+
+volumes:
+- volume: $PWD/manifests/k3d:k3s-manifests-custom
+  nodeFilters:
+  - server:0
+- volume: $PWD/.k3d/storage:k3s-storage
+  nodeFilters:
+  - servers:*
+
+registries:
+  create:
+    name: registry.localhost
+    host: "0.0.0.0"
+    hostPort: "5001"
+    volumes:
+    - $PWD/.k3d/registry:/var/lib/registry
+
+options:
+  k3d:
+    wait: true
+    timeout: "60s"
+  kubeconfig:
+    updateDefaultKubeconfig: true
+    switchCurrentContext: true

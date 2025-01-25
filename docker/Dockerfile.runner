@@ -1,0 +1,274 @@
+# syntax=docker/dockerfile:1.6
+FROM ubuntu:22.04 as base
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN <<EOT
+echo 'Acquire::ForceIPv4 "true";' | tee /etc/apt/apt.conf.d/1000-force-ipv4-transport
+apt-get update
+apt-get install -y software-properties-common curl git gcc python3-dev bzip2 openssh-server
+add-apt-repository ppa:deadsnakes/ppa
+apt-get update
+EOT
+
+
+# Python 3.12
+# ========================
+FROM base as py312
+
+WORKDIR /workspace
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    NVIDIA_VISIBLE_DEVICES=all
+
+COPY ./pkg/abstractions/image/base_requirements.txt /workspace/requirements.txt
+
+RUN <<EOT
+set -eux
+
+# Install python and dependencies
+apt-get install -y python3.12 python3.12-dev
+
+# Get the latest pip version
+curl -sS https://bootstrap.pypa.io/get-pip.py | python3.12
+python3.12 -m pip install --upgrade distlib setuptools pip urllib3
+python3.12 -m pip install -r /workspace/requirements.txt
+
+# Set default python
+rm -f /usr/bin/python && rm -f /usr/bin/python3 && ln -s /usr/bin/python3.12 /usr/bin/python && ln -s /usr/bin/python3.12 /usr/bin/python3
+
+# Clean up
+apt-get clean -y
+apt-get autoremove -y
+rm -rf /var/lib/apt/lists/*
+rm -rf /usr/share/doc
+rm -rf /root/.cache/*
+rm -rf /usr/lib/python2.7 && rm -rf /usr/lib/python3.6
+EOT
+
+VOLUME ["/volumes", "/snapshot"]
+
+
+# Python 3.11
+# ========================
+FROM base as py311
+
+WORKDIR /workspace
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    NVIDIA_VISIBLE_DEVICES=all
+
+COPY ./pkg/abstractions/image/base_requirements.txt /workspace/requirements.txt
+
+RUN <<EOT
+set -eux
+
+# Install python and dependencies
+apt-get install -y python3.11 python3.11-dev python3.11-distutils
+
+# Get the latest pip version
+curl -sS https://bootstrap.pypa.io/get-pip.py | python3.11
+python3.11 -m pip install setuptools==70.3.0
+python3.11 -m pip install --upgrade distlib pip
+python3.11 -m pip install -r /workspace/requirements.txt
+
+# Set default python
+rm -f /usr/bin/python && rm -f /usr/bin/python3 && ln -s /usr/bin/python3.11 /usr/bin/python && ln -s /usr/bin/python3.11 /usr/bin/python3
+
+# Clean up
+apt-get clean -y
+apt-get autoremove -y
+rm -rf /var/lib/apt/lists/*
+rm -rf /usr/share/doc
+rm -rf /root/.cache/*
+rm -rf /usr/lib/python2.7 && rm -rf /usr/lib/python3.6
+EOT
+
+VOLUME ["/volumes", "/snapshot"]
+
+
+# Python 3.10
+# ========================
+FROM base as py310
+
+WORKDIR /workspace
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    NVIDIA_VISIBLE_DEVICES=all
+
+COPY ./pkg/abstractions/image/base_requirements.txt /workspace/requirements.txt
+
+RUN <<EOT
+set -eux
+
+# Install python and dependencies
+apt-get install -y python3.10 python3.10-dev python3.10-distutils
+
+# Get the latest pip version
+curl -sS https://bootstrap.pypa.io/get-pip.py | python3.10
+python3.10 -m pip install setuptools==70.3.0
+python3.10 -m pip install --upgrade distlib pip
+python3.10 -m pip install -r /workspace/requirements.txt
+
+# Set default python
+rm -f /usr/bin/python && rm -f /usr/bin/python3 && ln -s /usr/bin/python3.10 /usr/bin/python && ln -s /usr/bin/python3.10 /usr/bin/python3
+
+# Clean up
+apt-get clean -y
+apt-get autoremove -y
+rm -rf /var/lib/apt/lists/*
+rm -rf /usr/share/doc
+rm -rf /root/.cache/*
+rm -rf /usr/lib/python2.7 && rm -rf /usr/lib/python3.6
+EOT
+
+VOLUME ["/volumes", "/snapshot"]
+
+
+# Python 3.9
+# ========================
+FROM base as py39
+
+WORKDIR /workspace
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    NVIDIA_VISIBLE_DEVICES=all
+
+COPY ./pkg/abstractions/image/base_requirements.txt /workspace/requirements.txt
+
+RUN <<EOT
+set -eux
+
+# Install python and dependencies
+apt-get install -y python3.9 python3.9-dev python3.9-distutils
+
+# Get the latest pip version
+curl -sS https://bootstrap.pypa.io/get-pip.py | python3.9
+python3.9 -m pip install setuptools==70.3.0
+python3.9 -m pip install --upgrade distlib pip
+python3.9 -m pip install -r /workspace/requirements.txt
+
+# Set default python
+rm -f /usr/bin/python && rm -f /usr/bin/python3 && ln -s /usr/bin/python3.9 /usr/bin/python && ln -s /usr/bin/python3.9 /usr/bin/python3
+
+# Clean up
+apt-get clean -y
+apt-get autoremove -y
+rm -rf /var/lib/apt/lists/*
+rm -rf /usr/share/doc
+rm -rf /root/.cache/*
+rm -rf /usr/lib/python2.7 && rm -rf /usr/lib/python3.6
+EOT
+
+VOLUME ["/volumes", "/snapshot"]
+
+
+# Python 3.8
+# ========================
+FROM base as py38
+
+WORKDIR /workspace
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    NVIDIA_VISIBLE_DEVICES=all
+
+COPY ./pkg/abstractions/image/base_requirements.txt /workspace/requirements.txt
+
+RUN <<EOT
+set -eux
+
+# Install python and dependencies
+apt-get install -y python3.8 python3.8-dev python3.8-distutils
+
+# Get the latest pip version
+curl -sS https://bootstrap.pypa.io/get-pip.py | python3.8
+python3.8 -m pip install setuptools==70.3.0
+python3.8 -m pip install --upgrade distlib pip
+python3.8 -m pip install -r /workspace/requirements.txt
+
+# Set default python
+rm -f /usr/bin/python && rm -f /usr/bin/python3 && ln -s /usr/bin/python3.8 /usr/bin/python && ln -s /usr/bin/python3.8 /usr/bin/python3
+
+# Clean up
+apt-get clean -y
+apt-get autoremove -y
+rm -rf /var/lib/apt/lists/*
+rm -rf /usr/share/doc
+rm -rf /root/.cache/*
+rm -rf /usr/lib/python2.7 && rm -rf /usr/lib/python3.6
+EOT
+
+VOLUME ["/volumes", "/snapshot"]
+
+# Micromamba-base
+# ========================
+FROM base as micromamba-base
+
+WORKDIR /workspace
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    NVIDIA_VISIBLE_DEVICES=all \
+    PATH=/micromamba/bin:$PATH \
+    MAMBA_ROOT_PREFIX=/micromamba \
+    MAMBA_EXE=/bin/micromamba \
+    SHELL=/bin/bash
+
+COPY ./pkg/abstractions/image/base_requirements.txt /workspace/requirements.txt
+
+SHELL ["/bin/bash", "-c"]
+RUN <<EOT
+set -eux
+
+VERSION="2.0.2"
+ARCH=$(uname -m)
+if [ "$ARCH" = "x86_64" ]; then
+    MAMBA_ARCH="64"
+elif [ "$ARCH" = "aarch64" ]; then
+    MAMBA_ARCH="aarch64"
+else
+    echo "Unsupported architecture: $ARCH"
+    exit 1
+fi
+
+curl -L "https://micro.mamba.pm/api/micromamba/linux-${MAMBA_ARCH}/${VERSION}" \
+| tar -xj -C "/" "bin/micromamba"
+
+mkdir -p /micromamba
+
+sh -c 'echo "#!/bin/sh\nexec micromamba run -n beta9 python3 \"\$@\""' > /micromamba/mpy
+chmod +x /micromamba/mpy
+
+apt-get clean -y
+apt-get autoremove -y
+rm -rf /var/lib/apt/lists/*
+rm -rf /usr/share/doc
+rm -rf /usr/share/man
+rm -rf /usr/share/locale
+rm -rf /root/.cache/*
+rm -rf /tmp/*
+EOT
+
+
+VOLUME ["/volumes", "/snapshot"]
+
+# Micromamba final
+# ========================
+ARG PYTHON_VERSION=3.10
+FROM micromamba-base as micromamba
+
+WORKDIR /workspace
+
+COPY --from=micromamba-base /micromamba /micromamba
+
+RUN <<EOT
+set -eux
+
+/bin/micromamba create -n beta9 python=${PYTHON_VERSION} -y
+/bin/micromamba run -n beta9 pip install -r /workspace/requirements.txt
+
+ln -sf /micromamba/mpy /usr/bin/micromamba${PYTHON_VERSION}
+
+/bin/micromamba clean --all --yes
+EOT
+
+VOLUME ["/volumes", "/snapshot"]

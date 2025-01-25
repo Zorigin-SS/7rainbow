@@ -1,0 +1,531 @@
+syntax = "proto3";
+
+option go_package = "github.com/beam-cloud/beta9/proto";
+import "google/protobuf/timestamp.proto";
+
+package gateway;
+
+service GatewayService {
+  // Auth
+  rpc Authorize(AuthorizeRequest) returns (AuthorizeResponse) {}
+  rpc SignPayload(SignPayloadRequest) returns (SignPayloadResponse) {}
+
+  // Objects
+  rpc HeadObject(HeadObjectRequest) returns (HeadObjectResponse) {}
+  rpc PutObject(PutObjectRequest) returns (PutObjectResponse) {}
+  rpc PutObjectStream(stream PutObjectRequest) returns (PutObjectResponse) {}
+  rpc ReplaceObjectContent(ReplaceObjectContentRequest)
+      returns (ReplaceObjectContentResponse) {}
+
+  // Containers
+  rpc ListContainers(ListContainersRequest) returns (ListContainersResponse) {}
+  rpc StopContainer(StopContainerRequest) returns (StopContainerResponse) {}
+
+  // Tasks
+  rpc StartTask(StartTaskRequest) returns (StartTaskResponse);
+  rpc EndTask(EndTaskRequest) returns (EndTaskResponse);
+  rpc StopTasks(StopTasksRequest) returns (StopTasksResponse);
+  rpc ListTasks(ListTasksRequest) returns (ListTasksResponse);
+
+  // Stubs
+  rpc GetOrCreateStub(GetOrCreateStubRequest) returns (GetOrCreateStubResponse);
+  rpc DeployStub(DeployStubRequest) returns (DeployStubResponse);
+  rpc GetURL(GetURLRequest) returns (GetURLResponse);
+
+  // Deployments
+  rpc ListDeployments(ListDeploymentsRequest) returns (ListDeploymentsResponse);
+  rpc StopDeployment(StopDeploymentRequest) returns (StopDeploymentResponse);
+  rpc StartDeployment(StartDeploymentRequest) returns (StartDeploymentResponse);
+  rpc DeleteDeployment(DeleteDeploymentRequest)
+      returns (DeleteDeploymentResponse);
+
+  // Pools
+  rpc ListPools(ListPoolsRequest) returns (ListPoolsResponse);
+
+  // Machines
+  rpc ListMachines(ListMachinesRequest) returns (ListMachinesResponse);
+  rpc CreateMachine(CreateMachineRequest) returns (CreateMachineResponse);
+  rpc DeleteMachine(DeleteMachineRequest) returns (DeleteMachineResponse);
+
+  // Tokens
+  rpc ListTokens(ListTokensRequest) returns (ListTokensResponse);
+  rpc CreateToken(CreateTokenRequest) returns (CreateTokenResponse);
+  rpc ToggleToken(ToggleTokenRequest) returns (ToggleTokenResponse);
+  rpc DeleteToken(DeleteTokenRequest) returns (DeleteTokenResponse);
+
+  // Workers
+  rpc ListWorkers(ListWorkersRequest) returns (ListWorkersResponse);
+  rpc CordonWorker(CordonWorkerRequest) returns (CordonWorkerResponse);
+  rpc UncordonWorker(UncordonWorkerRequest) returns (UncordonWorkerResponse);
+  rpc DrainWorker(DrainWorkerRequest) returns (DrainWorkerResponse);
+
+  // Workspace
+  rpc ExportWorkspaceConfig(ExportWorkspaceConfigRequest)
+      returns (ExportWorkspaceConfigResponse);
+}
+
+message AuthorizeRequest {}
+
+message AuthorizeResponse {
+  bool ok = 1;
+  string workspace_id = 2;
+  string new_token = 3;
+  string error_msg = 4;
+}
+
+message SignPayloadRequest { bytes payload = 1; }
+
+message SignPayloadResponse {
+  bool ok = 1;
+  string signature = 2;
+  int64 timestamp = 3;
+  string error_msg = 4;
+}
+
+message ObjectMetadata {
+  string name = 1;
+  int64 size = 2;
+}
+
+message HeadObjectRequest { string hash = 1; }
+
+message HeadObjectResponse {
+  bool ok = 1;
+  bool exists = 2;
+  string object_id = 3;
+  ObjectMetadata object_metadata = 4;
+  string error_msg = 5;
+}
+
+message PutObjectRequest {
+  bytes object_content = 1;
+  ObjectMetadata object_metadata = 2;
+  string hash = 3;
+  bool overwrite = 4;
+}
+
+message PutObjectResponse {
+  bool ok = 1;
+  string object_id = 2;
+  string error_msg = 3;
+}
+
+enum ReplaceObjectContentOperation {
+  WRITE = 0;
+  DELETE = 1;
+  MOVED = 2;
+}
+
+message ReplaceObjectContentRequest {
+  string object_id = 1;
+  string path = 2;
+  string new_path = 3;
+  bool is_dir = 4;
+  bytes data = 5;
+  ReplaceObjectContentOperation op = 6;
+}
+
+message ReplaceObjectContentResponse { bool ok = 1; }
+
+// Container messages
+
+message Container {
+  string container_id = 1;
+  string stub_id = 2;
+  string status = 3;
+  google.protobuf.Timestamp scheduled_at = 4;
+  string workspace_id = 5;
+  string worker_id = 6;
+  string machine_id = 7;
+}
+
+message ListContainersRequest {}
+
+message ListContainersResponse {
+  repeated Container containers = 1;
+  bool ok = 2;
+  string error_msg = 3;
+}
+
+message StopContainerRequest { string container_id = 1; }
+
+message StopContainerResponse {
+  bool ok = 1;
+  string error_msg = 2;
+}
+
+// Task messages
+message StartTaskRequest {
+  string task_id = 1;
+  string container_id = 2;
+}
+
+message StartTaskResponse { bool ok = 1; }
+
+message EndTaskRequest {
+  string task_id = 1;
+  float task_duration = 2;
+  string task_status = 3;
+  string container_id = 4;
+  string container_hostname = 5;
+  float keep_warm_seconds = 6;
+}
+
+message EndTaskResponse { bool ok = 1; }
+
+message StringList { repeated string values = 1; }
+
+message ListTasksRequest {
+  map<string, StringList> filters = 1;
+  uint32 limit = 2;
+}
+
+message Task {
+  string id = 2;
+  string status = 3;
+  string container_id = 4;
+  google.protobuf.Timestamp started_at = 5;
+  google.protobuf.Timestamp ended_at = 6;
+  string stub_id = 7;
+  string stub_name = 8;
+  string workspace_id = 9;
+  string workspace_name = 10;
+  google.protobuf.Timestamp created_at = 11;
+  google.protobuf.Timestamp updated_at = 12;
+}
+
+message ListTasksResponse {
+  bool ok = 1;
+  string err_msg = 2;
+  repeated Task tasks = 3;
+  int32 total = 4;
+}
+
+message StopTasksRequest { repeated string task_ids = 1; }
+
+message StopTasksResponse {
+  bool ok = 1;
+  string err_msg = 2;
+}
+
+message Volume {
+  string id = 1;
+  string mount_path = 2;
+  optional MountPointConfig config = 3;
+}
+
+message MountPointConfig {
+  string bucket_name = 1;
+  string access_key = 2;
+  string secret_key = 3;
+  string endpoint_url = 4;
+  string region = 5;
+  bool read_only = 6;
+}
+
+message SecretVar { string name = 1; }
+
+message Autoscaler {
+  string type = 1;
+  uint32 max_containers = 2;
+  uint32 tasks_per_container = 3;
+  uint32 min_containers = 4;
+}
+
+message TaskPolicy {
+  int64 timeout = 1;
+  uint32 max_retries = 2;
+  uint32 ttl = 3;
+}
+
+message GetOrCreateStubRequest {
+  string object_id = 1;
+  string image_id = 2;
+  string stub_type = 3;
+  string name = 4;
+  string python_version = 5;
+  int64 cpu = 6;
+  int64 memory = 7;
+  string gpu = 8;
+  string handler = 9;
+  uint32 retries = 10;
+  int64 timeout = 11;
+  float keep_warm_seconds = 12;
+  uint32 workers = 13;
+  uint32 max_pending_tasks = 15;
+  repeated Volume volumes = 16;
+  bool force_create = 17;
+  string on_start = 18;
+  string callback_url = 19;
+  bool authorized = 20;
+  repeated SecretVar secrets = 21;
+  Autoscaler autoscaler = 22;
+  TaskPolicy task_policy = 23;
+  uint32 concurrent_requests = 24;
+  string extra = 25;
+  bool checkpoint_enabled = 26;
+  uint32 gpu_count = 27;
+  string on_deploy = 28;
+  string on_deploy_stub_id = 29;
+}
+
+message GetOrCreateStubResponse {
+  bool ok = 1;
+  string stub_id = 2;
+  string err_msg = 3;
+  string warn_msg = 4;
+}
+
+message DeployStubRequest {
+  string stub_id = 1;
+  string name = 2;
+}
+
+message DeployStubResponse {
+  bool ok = 1;
+  string deployment_id = 2;
+  uint32 version = 3;
+  string invoke_url = 4;
+}
+
+message Deployment {
+  string id = 1;
+  string name = 2;
+  bool active = 3;
+  string stub_id = 4;
+  string stub_type = 5;
+  string stub_name = 6;
+  uint32 version = 7;
+  string workspace_id = 8;
+  string workspace_name = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+message ListDeploymentsRequest {
+  map<string, StringList> filters = 1;
+  uint32 limit = 2;
+}
+
+message ListDeploymentsResponse {
+  bool ok = 1;
+  string err_msg = 2;
+  repeated Deployment deployments = 3;
+}
+
+message StopDeploymentRequest { string id = 1; }
+
+message StopDeploymentResponse {
+  bool ok = 1;
+  string err_msg = 2;
+}
+
+message StartDeploymentRequest { string id = 1; }
+
+message StartDeploymentResponse {
+  bool ok = 1;
+  string err_msg = 2;
+}
+
+message DeleteDeploymentRequest { string id = 1; }
+
+message DeleteDeploymentResponse {
+  bool ok = 1;
+  string err_msg = 2;
+}
+
+message Pool {
+  string name = 2;
+  bool active = 3;
+  string gpu = 4;
+  string minFreeGpu = 5;
+  string minFreeCpu = 6;
+  string minFreeMemory = 7;
+  string defaultWorkerCpu = 8;
+  string defaultWorkerMemory = 9;
+  string defaultWorkerGpuCount = 10;
+}
+
+message ListPoolsRequest {
+  map<string, StringList> filters = 1;
+  uint32 limit = 2;
+}
+
+message ListPoolsResponse {
+  bool ok = 1;
+  string err_msg = 2;
+  repeated Pool pools = 3;
+}
+
+message Machine {
+  string id = 1;
+  int64 cpu = 2;
+  int64 memory = 3;
+  string gpu = 4;
+  uint32 gpu_count = 5;
+  string status = 6;
+  string pool_name = 7;
+  string provider_name = 8;
+  string registration_token = 9;
+  string tailscale_url = 10;
+  string tailscale_auth = 11;
+  string last_keepalive = 12;
+  string created = 13;
+  string agent_version = 14;
+  MachineMetrics machine_metrics = 15;
+  string user_data = 16;
+}
+
+message MachineMetrics {
+  int32 total_cpu_available = 1;
+  int32 total_memory_available = 2;
+  float cpu_utilization_pct = 3;
+  float memory_utilization_pct = 4;
+  int32 worker_count = 5;
+  int32 container_count = 6;
+  int32 free_gpu_count = 7;
+  float cache_usage_pct = 8;
+  int32 cache_capacity = 9;
+  int32 cache_memory_usage = 10;
+  float cache_cpu_usage = 11;
+}
+
+message ListMachinesRequest {
+  string pool_name = 1;
+  uint32 limit = 2;
+}
+
+message ListMachinesResponse {
+  bool ok = 1;
+  string err_msg = 2;
+  repeated Machine machines = 3;
+  map<string, bool> gpus = 4;
+}
+
+message CreateMachineRequest { string pool_name = 1; }
+
+message CreateMachineResponse {
+  bool ok = 1;
+  string err_msg = 2;
+  Machine machine = 3;
+}
+
+message DeleteMachineRequest {
+  string machine_id = 1;
+  string pool_name = 2;
+}
+
+message DeleteMachineResponse {
+  bool ok = 1;
+  string err_msg = 2;
+}
+
+message Token {
+  string token_id = 1;
+  string key = 2;
+  bool active = 3;
+  bool reusable = 4;
+  optional uint32 workspace_id = 5;
+  string token_type = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message ListTokensRequest {}
+
+message ListTokensResponse {
+  bool ok = 1;
+  string err_msg = 2;
+  repeated Token tokens = 3;
+}
+
+message CreateTokenRequest {}
+
+message CreateTokenResponse {
+  bool ok = 1;
+  string err_msg = 2;
+  Token token = 3;
+}
+
+message ToggleTokenRequest { string token_id = 1; }
+
+message ToggleTokenResponse {
+  bool ok = 1;
+  string err_msg = 2;
+  Token token = 3;
+}
+
+message DeleteTokenRequest { string token_id = 1; }
+
+message DeleteTokenResponse {
+  bool ok = 1;
+  string err_msg = 2;
+}
+
+message GetURLRequest {
+  string stub_id = 1;
+  string deployment_id = 2;
+  string url_type = 3;
+}
+
+message GetURLResponse {
+  bool ok = 1;
+  string err_msg = 2;
+  string url = 3;
+}
+
+message Worker {
+  string id = 1;
+  string status = 2;
+  string gpu = 3;
+  string pool_name = 4;
+  string machine_id = 5;
+  int32 priority = 6;
+  int64 total_cpu = 7;
+  int64 total_memory = 8;
+  uint32 total_gpu_count = 9;
+  int64 free_cpu = 10;
+  int64 free_memory = 11;
+  uint32 free_gpu_count = 12;
+  repeated Container active_containers = 13;
+  string build_version = 14;
+}
+
+message ListWorkersRequest {}
+
+message ListWorkersResponse {
+  bool ok = 1;
+  string err_msg = 2;
+  repeated Worker workers = 3;
+}
+
+message CordonWorkerRequest { string worker_id = 1; }
+
+message CordonWorkerResponse {
+  bool ok = 1;
+  string err_msg = 2;
+}
+
+message UncordonWorkerRequest { string worker_id = 1; }
+
+message UncordonWorkerResponse {
+  bool ok = 1;
+  string err_msg = 2;
+}
+
+message DrainWorkerRequest { string worker_id = 1; }
+
+message DrainWorkerResponse {
+  bool ok = 1;
+  string err_msg = 2;
+}
+
+message ExportWorkspaceConfigRequest {}
+
+message ExportWorkspaceConfigResponse {
+  string gateway_http_url = 1;
+  int32 gateway_http_port = 2;
+  string gateway_grpc_url = 3;
+  int32 gateway_grpc_port = 4;
+  string workspace_id = 5;
+}

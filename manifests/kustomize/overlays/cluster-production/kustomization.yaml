@@ -1,0 +1,13 @@
+---
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../base
+components:
+- ../../components/nvidia-device-plugin
+- ../../components/monitoring
+# - ../../components/juicefs
+# - ../../components/redis
+# - ../../components/postgresql
+# - ../../components/localstack
+- ../../components/beta9-gateway

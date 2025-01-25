@@ -1,0 +1,126 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app.kubernetes.io/component: gateway
+  name: beta9-gateway
+  namespace: beta9
+spec:
+  replicas: 1
+  revisionHistoryLimit: 3
+  selector:
+    matchLabels:
+      app.kubernetes.io/component: gateway
+      app.kubernetes.io/name: beta9
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/component: gateway
+        app.kubernetes.io/name: beta9
+    spec:
+      automountServiceAccountToken: true
+      terminationGracePeriodSeconds: 185
+      initContainers:
+      - name: wait-on-backends
+        image: busybox
+        command:
+        - sh
+        - -c
+        - |
+          until nc -z postgresql 5432; do echo "Waiting on PostgreSQL..."; sleep 2; done;
+          until nc -z redis-master 6379; do echo "Waiting on Redis..."; sleep 2; done;
+          until nc -z juicefs-redis-master 6379; do echo "Waiting on Redis (JuiceFS)..."; sleep 2; done;
+          echo "All systems ready!"
+      containers:
+      - command:
+        - /usr/local/bin/gateway
+        env:
+        - name: CONFIG_PATH
+          value: /etc/beta9/.config.yaml
+        image: registry.localhost:5000/beta9-gateway:latest
+        name: main
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 2
+          httpGet:
+            path: /api/v1/health
+            port: 1994
+        resources:
+          limits:
+            cpu: 4000m
+            memory: 4Gi
+        securityContext:
+          privileged: true
+        volumeMounts:
+        - mountPath: /etc/beta9
+          name: config
+        - mountPath: /images
+          name: images
+      dnsPolicy: ClusterFirst
+      enableServiceLinks: true
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      serviceAccountName: gateway
+      volumes:
+      - name: config
+        secret:
+          secretName: beta9-config
+      - name: images
+        persistentVolumeClaim:
+          claimName: beta9-images
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: beta9-proxy
+  namespace: beta9
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: beta9-proxy
+  template:
+    metadata:
+      labels:
+        app: beta9-proxy
+    spec:
+      terminationGracePeriodSeconds: 185
+      initContainers:
+      - name: wait-on-backends
+        image: busybox
+        command:
+        - sh
+        - -c
+        - |
+          until nc -z redis-master 6379; do echo "Waiting on Redis..."; sleep 2; done;
+          echo "All systems ready!"
+      containers:
+      - name: proxy
+        image: registry.localhost:5000/beta9-proxy:latest
+        command:
+        - /usr/local/bin/proxy
+        securityContext:
+          privileged: true
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 3
+          periodSeconds: 3
+          timeoutSeconds: 2
+          httpGet:
+            path: /ready
+            port: 1989
+        resources:
+          requests:
+            cpu: 1000m
+            memory: 1Gi
+          limits:
+            cpu: 1000m
+            memory: 2Gi
