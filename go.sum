@@ -1,3 +1,5 @@
+// replace with your own
+
 buf.build/gen/go/cedana/gpu/protocolbuffers/go v1.35.2-20241203191352-2167379de17d.1 h1:AxyPWWT4YGmLs8RduxavZi3acD+WGXXr2r7oJP2EBQQ=
 buf.build/gen/go/cedana/gpu/protocolbuffers/go v1.35.2-20241203191352-2167379de17d.1/go.mod h1:14P29lBGPpmKBTOhetR/D806Xraxf+f7Zw9nwaWSOmo=
 buf.build/gen/go/cedana/task/grpc/go v1.5.1-20241203191352-12c25eb032cd.1 h1:qTCCRcSFwS7IIKeBtSSOgaZVSsH3T7V0sSRKFAGrPds=
